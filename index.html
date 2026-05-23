@@ -403,40 +403,13 @@
 var Content = (function() {
   'use strict';
 
-  var scrollDebounceTimer = null;
-
   function escapeHtml(str) {
     var div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
   }
 
-  function init(store) {
-    var main = document.getElementById('content');
-    main.addEventListener('scroll', function() {
-      if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
-      scrollDebounceTimer = setTimeout(function() {
-        checkAutoComplete(main);
-      }, 200);
-    });
-  }
-
-  function checkAutoComplete(main) {
-    var percent = (main.scrollTop + main.clientHeight) / main.scrollHeight;
-    if (percent >= 0.9) {
-      var view = window.__STORE__.get('currentView');
-      if (view && view.type === 'submodule' && view.id) {
-        if (!Progress.isSubmoduleComplete(view.id)) {
-          setTimeout(function() {
-            var currentView = window.__STORE__.get('currentView');
-            if (currentView && currentView.id === view.id) {
-              Progress.markSubmoduleComplete(view.id);
-            }
-          }, 2000);
-        }
-      }
-    }
-  }
+  function init(store) {}
 
   function getSubmodule(id) {
     var modules = window.__STORE__.get('course.modules');
