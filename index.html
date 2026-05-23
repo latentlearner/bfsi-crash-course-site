@@ -973,6 +973,16 @@ var QuizComponent = (function() {
       }
     }
 
+    var existing = state.progress.quizScores[moduleId];
+    if (existing) {
+      renderLanding(quiz, moduleId, mod, existing);
+      return;
+    }
+
+    beginQuiz(quiz, moduleId);
+  }
+
+  function beginQuiz(quiz, moduleId) {
     session = {
       quiz: quiz,
       moduleId: moduleId,
@@ -981,8 +991,56 @@ var QuizComponent = (function() {
       selected: new Array(quiz.questions.length),
       correctCount: 0
     };
-
     renderCurrentQuestion();
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '';
+    try {
+      return new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function renderLanding(quiz, moduleId, mod, score) {
+    var store = window.__STORE__;
+    var state = store.getState();
+    var main = document.getElementById('content');
+    var passed = !!(score && score.passedAt);
+    var attempts = score.attempts || 0;
+
+    var html = '<div class="reader-inner"><div class="quiz-wrap">';
+    html += '<div class="q-eyebrow">' + (moduleId === 'final' ? 'Final assessment' : 'Module quiz') + '</div>';
+    html += '<h2 class="quiz-title">' + escapeHtml(quiz.title) + '</h2>';
+
+    html += '<div class="result-banner ' + (passed ? 'pass' : 'fail') + '">';
+    html += '<div class="result-score">' + (passed ? 'Passed' : 'Not yet passed') + '</div>';
+    var detail = 'Best ' + score.best + '% · Last attempt ' + score.last + '% · ' +
+      attempts + ' attempt' + (attempts === 1 ? '' : 's');
+    if (passed && score.passedAt) detail += ' · first passed ' + formatDate(score.passedAt);
+    html += '<div class="result-detail">' + detail + '</div>';
+    html += '</div>';
+
+    html += '<p class="quiz-sub" style="margin-top:18px;">Retaking the quiz starts a fresh attempt. Your best score is kept.</p>';
+
+    html += '<div class="quiz-actions">';
+    html += '<button id="quiz-start-btn" class="btn-primary">Retake quiz →</button>';
+    var modules = state.course.modules;
+    var currentModIdx = modules.findIndex(function(m) { return m.id === moduleId; });
+    if (passed && currentModIdx >= 0 && currentModIdx < modules.length - 1) {
+      var nextMod = modules[currentModIdx + 1];
+      html += '<a href="#' + nextMod.submodules[0].id + '" class="btn-secondary">Next module →</a>';
+    }
+    html += '</div>';
+    html += '</div></div>';
+
+    main.innerHTML = html;
+    main.scrollTop = 0;
+
+    document.getElementById('quiz-start-btn').addEventListener('click', function() {
+      beginQuiz(quiz, moduleId);
+    });
   }
 
   function quizHeader(idx, total) {
@@ -1143,7 +1201,7 @@ var QuizComponent = (function() {
     });
 
     html += '<div class="quiz-actions" style="margin-top:24px;">';
-    html += '<a href="#quiz-' + session.moduleId + '" class="btn-primary">Retake quiz</a>';
+    html += '<button id="quiz-retake-btn" class="btn-primary">Retake quiz →</button>';
     var modules = state.course.modules;
     var currentModIdx = modules.findIndex(function(m) { return m.id === session.moduleId; });
     if (currentModIdx >= 0 && currentModIdx < modules.length - 1) {
@@ -1157,6 +1215,15 @@ var QuizComponent = (function() {
     main.scrollTop = 0;
 
     Progress.recordQuizScore(session.moduleId, score);
+
+    var retakeQuiz = session.quiz;
+    var retakeModuleId = session.moduleId;
+    var retakeBtn = document.getElementById('quiz-retake-btn');
+    if (retakeBtn) {
+      retakeBtn.addEventListener('click', function() {
+        beginQuiz(retakeQuiz, retakeModuleId);
+      });
+    }
   }
 
   return { init: init, render: render };
